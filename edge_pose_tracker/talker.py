@@ -3,6 +3,7 @@ from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rcl_interfaces.msg import SetParametersResult
 from std_msgs.msg import String
+from std_srvs.srv import SetBool
 
 
 class ConfigurableHeartbeatPublisher(Node):
@@ -19,6 +20,9 @@ class ConfigurableHeartbeatPublisher(Node):
         self.frame_id = self.get_parameter('frame_id').value
         self.device_id = self.get_parameter('device_id').value
 
+        # Internal operational state
+        self.is_active = True
+
         self.get_logger().info(f'Initilized with Frame ID: "{self.frame_id}", Device ID: {self.device_id}, Rate: {self.publish_rate} Hz')
 
         # 3. Create publisher and timer based on parameter rate
@@ -29,6 +33,24 @@ class ConfigurableHeartbeatPublisher(Node):
 
         # 4. Register a dynamic callback to handle runtime changes
         self.add_on_set_parameters_callback(self.parameters_callback)
+
+        # 5. Service Server: toggles telemetry on/off
+        self.srv = self.create_service(
+            SetBool,
+            'toggle_pipeline',
+            self.toggle_pipeline_callback
+        )
+
+    def toggle_pipeline_callback(self, request, response):
+        self.is_active = request.data
+        response.success = True
+        if self.is_active:
+            response.message = "Pipeline broadcast resumed (Active)"
+            self.get_logger().info("Service Invoked: Resuming telemetry broadcast.")
+        else:
+            response.message = "Pipeline broadcast paused (Standby)"
+            self.get_logger().warn("Service Invoked: Pausing telemetry broadcast.")
+        return response
 
     def parameters_callback(self,params):
         for param in params:
@@ -55,6 +77,10 @@ class ConfigurableHeartbeatPublisher(Node):
 
 
     def timer_callback(self):
+        # Only publish if operational state is active
+        if not self.is_active:
+            return
+
         msg = String()
         msg.data = f'[{self.frame_id}] Heartbeat Seq: {self.sequence_id} (Rate: {self.publish_rate}Hz)'
         self.publisher_.publish(msg)
