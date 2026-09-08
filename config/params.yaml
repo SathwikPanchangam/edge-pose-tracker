@@ -1,0 +1,5 @@
+/heartbeat_publisher:
+  ros__parameters:
+    publish_rate: 10.0
+    frame_id: "optical_camera_front"
+    device_id: 1
