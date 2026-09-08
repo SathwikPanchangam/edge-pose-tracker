@@ -13,17 +13,15 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='sathwiksai30',
-    maintainer_email='sathwiksai30@todo.todo',
+    maintainer='Sathwik Panchangam',
+    maintainer_email='sathwik.nagasai@gmail.com',
     description='Edge-based 6D pose tracking and uncertainty quantification pipeline',
-    license='TODO: License declaration',
-    extras_require={
-        'test': [
-            'pytest',
-        ],
-    },
+    license='Apache-2.0',
+    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'talker = edge_pose_tracker.talker:main',
+            'listener = edge_pose_tracker.listener:main',
         ],
     },
 )
