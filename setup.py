@@ -29,6 +29,7 @@ setup(
             'camera_publisher = edge_pose_tracker.camera_publisher:main',
             'pose_estimator = edge_pose_tracker.pose_estimator:main',
             'pose_filter = edge_pose_tracker.pose_filter:main',
+            'performance_evaluator = edge_pose_tracker.performance_evaluator:main',
         ],
     },
 )
