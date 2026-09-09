@@ -1,0 +1,47 @@
+name: ROS 2 Humble CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-22.04
+    container:
+      image: osrf/ros:humble-desktop-full
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install System and Python Dependencies
+        run: |
+          apt-get update && apt-get install -y \
+            python3-pip \
+            python3-pytest \
+            python3-colcon-common-extensions \
+            ros-humble-cv-bridge \
+            ros-humble-tf2-ros \
+            ros-humble-sensor-msgs \
+            ros-humble-geometry-msgs
+          pip3 install opencv-python-headless
+
+      - name: Set up Workspace
+        run: |
+          mkdir -p /root/ws/src/edge_pose_tracker
+          cp -r . /root/ws/src/edge_pose_tracker
+
+      - name: Build Package
+        run: |
+          . /opt/ros/humble/setup.sh
+          cd /root/ws
+          colcon build --symlink-install --packages-select edge_pose_tracker
+
+      - name: Run Test Suite
+        run: |
+          . /opt/ros/humble/setup.sh
+          cd /root/ws
+          colcon test --packages-select edge_pose_tracker
+          colcon test-result --verbose
