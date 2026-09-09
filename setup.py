@@ -28,6 +28,7 @@ setup(
             'listener = edge_pose_tracker.listener:main',
             'camera_publisher = edge_pose_tracker.camera_publisher:main',
             'pose_estimator = edge_pose_tracker.pose_estimator:main',
+            'pose_filter = edge_pose_tracker.pose_filter:main',
         ],
     },
 )

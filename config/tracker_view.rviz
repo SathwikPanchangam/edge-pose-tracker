@@ -55,8 +55,10 @@ Visualization Manager:
       Enabled: true
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        All Enabled: false
         camera_optical_frame:
+          Value: true
+        target_object_filtered:
           Value: true
         target_object_frame:
           Value: true
@@ -67,6 +69,8 @@ Visualization Manager:
       Show Names: false
       Tree:
         camera_optical_frame:
+          target_object_filtered:
+            {}
           target_object_frame:
             {}
       Update Interval: 0
@@ -105,7 +109,7 @@ Visualization Manager:
           Scale: 1
           Value: true
         Value: true
-      Enabled: true
+      Enabled: false
       Head Length: 0.30000001192092896
       Head Radius: 0.10000000149011612
       Name: PoseWithCovariance
@@ -119,7 +123,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /tracker/pose_with_covariance
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -166,7 +170,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 6.703016757965088
+      Distance: 1.550931453704834
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1

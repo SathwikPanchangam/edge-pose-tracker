@@ -24,7 +24,16 @@ def generate_launch_description():
         emulate_tty=True
     )
 
+    filter_node = Node(
+        package='edge_pose_tracker',
+        executable='pose_filter',
+        name='pose_filter',
+        output='screen',
+        emulate_tty=True
+    )
+
     return LaunchDescription([
         camera_node,
-        pose_node
+        pose_node,
+        filter_node
     ])
