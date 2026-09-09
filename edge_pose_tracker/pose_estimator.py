@@ -13,19 +13,35 @@ class PoseEstimatorNode(Node):
     def __init__(self):
         super().__init__('pose_estimator')
 
-        # Parameters
+        # Declare parameters with fallbacks
         self.declare_parameter('marker_size', 0.05)
         self.declare_parameter('camera_frame', 'camera_optical_frame')
         self.declare_parameter('target_frame', 'target_object_frame')
+        self.declare_parameter('fx', 600.0)
+        self.declare_parameter('fy', 600.0)
+        self.declare_parameter('cx', 320.0)
+        self.declare_parameter('cy', 240.0)
 
+        # Ingest parameters
         self.marker_size = self.get_parameter('marker_size').value
         self.camera_frame = self.get_parameter('camera_frame').value
         self.target_frame = self.get_parameter('target_frame').value
+        fx = self.get_parameter('fx').value
+        fy = self.get_parameter('fy').value
+        cx = self.get_parameter('cx').value
+        cy = self.get_parameter('cy').value
+
+        # Construct intrinsic matrix dynamically
+        self.camera_matrix = np.array([
+            [fx, 0.0, cx],
+            [0.0, fy, cy],
+            [0.0, 0.0, 1.0]
+        ], dtype=np.float64)
+        self.dist_coeffs = np.zeros((4, 1), dtype=np.float64)
 
         self.bridge = CvBridge()
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
-        # Topic Publishers and Subscribers
         self.image_sub = self.create_subscription(
             Image,
             '/camera/image_raw',
@@ -36,7 +52,7 @@ class PoseEstimatorNode(Node):
         self.cov_pub = self.create_publisher(PoseWithCovarianceStamped, '/tracker/pose_with_covariance', 10)
         self.debug_pub = self.create_publisher(Image, '/tracker/image_debug', 10)
 
-        # ArUco initialization
+        # ArUco dictionary initialization
         if hasattr(cv2.aruco, 'getPredefinedDictionary'):
             self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
         else:
@@ -50,14 +66,6 @@ class PoseEstimatorNode(Node):
             self.detector = cv2.aruco.ArucoDetector(self.aruco_dict, self.aruco_params)
             self.use_legacy_detector = False
 
-        # Camera Intrinsics
-        self.camera_matrix = np.array([
-            [600.0, 0.0, 320.0],
-            [0.0, 600.0, 240.0],
-            [0.0, 0.0, 1.0]
-        ], dtype=np.float64)
-        self.dist_coeffs = np.zeros((4, 1), dtype=np.float64)
-
         half_l = self.marker_size / 2.0
         self.obj_points = np.array([
             [-half_l,  half_l, 0.0],
@@ -66,40 +74,31 @@ class PoseEstimatorNode(Node):
             [-half_l, -half_l, 0.0]
         ], dtype=np.float64)
 
-        self.get_logger().info('Pose Estimator with Uncertainty Quantification active.')
+        self.get_logger().info(
+            f'Pose Estimator active | Intrinsics: fx={fx}, fy={fy}, cx={cx}, cy={cy}'
+        )
 
     def compute_reprojection_error(self, rvec, tvec, img_points):
-        """Computes root-mean-square reprojection error between 2D corners and projected 3D points."""
         proj_points, _ = cv2.projectPoints(
             self.obj_points, rvec, tvec, self.camera_matrix, self.dist_coeffs
         )
         proj_points = proj_points.reshape(-1, 2)
-        error = np.mean(np.linalg.norm(img_points - proj_points, axis=1))
-        return float(error)
+        return float(np.mean(np.linalg.norm(img_points - proj_points, axis=1)))
 
     def generate_covariance(self, z_depth, reproj_error):
-        """Computes a 6x6 covariance matrix (flattened to 36) based on depth and projection residuals."""
         cov = [0.0] * 36
-
-        # Base noise scale modulated by reprojection error residual
         residual_scale = max(1.0, reproj_error)
 
-        # Lateral positional variance (sigma_x, sigma_y proportional to Z)
         var_xy = ((0.005 * z_depth) * residual_scale) ** 2
-
-        # Axial positional variance (sigma_z proportional to Z^2 due to perspective projection)
         var_z = ((0.02 * (z_depth ** 2)) * residual_scale) ** 2
-
-        # Rotational variance (in radians^2)
         var_rot = (np.radians(2.0) * residual_scale) ** 2
 
-        cov[0] = float(var_xy)    # Var(X)
-        cov[7] = float(var_xy)    # Var(Y)
-        cov[14] = float(var_z)    # Var(Z)
-        cov[21] = float(var_rot)  # Var(Roll)
-        cov[28] = float(var_rot)  # Var(Pitch)
-        cov[35] = float(var_rot)  # Var(Yaw)
-
+        cov[0] = float(var_xy)
+        cov[7] = float(var_xy)
+        cov[14] = float(var_z)
+        cov[21] = float(var_rot)
+        cov[28] = float(var_rot)
+        cov[35] = float(var_rot)
         return cov
 
     def image_callback(self, msg):
@@ -126,7 +125,6 @@ class PoseEstimatorNode(Node):
             )
 
             if success:
-                # Debug axes
                 if hasattr(cv2, 'drawFrameAxes'):
                     cv2.drawFrameAxes(frame, self.camera_matrix, self.dist_coeffs, rvec, tvec, 0.03)
                 elif hasattr(cv2.aruco, 'drawAxis'):
@@ -135,12 +133,10 @@ class PoseEstimatorNode(Node):
                 rmat, _ = cv2.Rodrigues(rvec)
                 qx, qy, qz, qw = self.rotation_matrix_to_quaternion(rmat)
 
-                # Compute uncertainty residuals
                 z_depth = float(tvec[2][0])
                 reproj_error = self.compute_reprojection_error(rvec, tvec, img_points)
                 covariance = self.generate_covariance(z_depth, reproj_error)
 
-                # 1. Publish PoseStamped
                 pose_msg = PoseStamped()
                 pose_msg.header.stamp = msg.header.stamp
                 pose_msg.header.frame_id = self.camera_frame
@@ -153,14 +149,12 @@ class PoseEstimatorNode(Node):
                 pose_msg.pose.orientation.w = qw
                 self.pose_pub.publish(pose_msg)
 
-                # 2. Publish PoseWithCovarianceStamped
                 cov_msg = PoseWithCovarianceStamped()
                 cov_msg.header = pose_msg.header
                 cov_msg.pose.pose = pose_msg.pose
                 cov_msg.pose.covariance = covariance
                 self.cov_pub.publish(cov_msg)
 
-                # 3. Dynamic TF Broadcast
                 t = TransformStamped()
                 t.header.stamp = msg.header.stamp
                 t.header.frame_id = self.camera_frame
@@ -170,11 +164,6 @@ class PoseEstimatorNode(Node):
                 t.transform.translation.z = z_depth
                 t.transform.rotation = pose_msg.pose.orientation
                 self.tf_broadcaster.sendTransform(t)
-
-                self.get_logger().info(
-                    f'Tracking: Z={z_depth:.2f}m | ReprojErr={reproj_error:.2f}px | '
-                    f'Sigma_Z={np.sqrt(covariance[14])*1000:.1f}mm'
-                )
 
         debug_msg = self.bridge.cv2_to_imgmsg(frame, encoding='bgr8')
         debug_msg.header = msg.header

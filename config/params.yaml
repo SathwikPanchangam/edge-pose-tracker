@@ -1,5 +1,20 @@
-/heartbeat_publisher:
+/camera_publisher:
   ros__parameters:
-    publish_rate: 10.0
-    frame_id: "optical_camera_front"
-    device_id: 1
+    device_id: 0
+    framerate: 30.0
+    frame_id: "camera_optical_frame"
+
+/pose_estimator:
+  ros__parameters:
+    marker_size: 0.05
+    camera_frame: "camera_optical_frame"
+    target_frame: "target_object_frame"
+    fx: 600.0
+    fy: 600.0
+    cx: 320.0
+    cy: 240.0
+
+/pose_filter:
+  ros__parameters:
+    process_noise_q: 0.02
+    filtered_frame: "target_object_filtered"

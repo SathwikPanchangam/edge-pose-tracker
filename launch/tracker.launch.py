@@ -13,6 +13,7 @@ def generate_launch_description():
         executable='camera_publisher',
         name='camera_publisher',
         output='screen',
+        parameters=[param_file],
         emulate_tty=True
     )
 
@@ -21,6 +22,7 @@ def generate_launch_description():
         executable='pose_estimator',
         name='pose_estimator',
         output='screen',
+        parameters=[param_file],
         emulate_tty=True
     )
 
@@ -29,6 +31,7 @@ def generate_launch_description():
         executable='pose_filter',
         name='pose_filter',
         output='screen',
+        parameters=[param_file],
         emulate_tty=True
     )
 
