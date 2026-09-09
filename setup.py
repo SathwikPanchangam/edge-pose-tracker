@@ -27,6 +27,7 @@ setup(
             'talker = edge_pose_tracker.talker:main',
             'listener = edge_pose_tracker.listener:main',
             'camera_publisher = edge_pose_tracker.camera_publisher:main',
+            'pose_estimator = edge_pose_tracker.pose_estimator:main',
         ],
     },
 )
