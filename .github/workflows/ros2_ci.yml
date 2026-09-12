@@ -1,4 +1,4 @@
-name: ROS 2 Humble CI
+name: ROS 2 Jazzy CI
 
 on:
   push:
@@ -8,9 +8,9 @@ on:
 
 jobs:
   build_and_test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     container:
-      image: osrf/ros:humble-desktop-full
+      image: osrf/ros:jazzy-desktop
 
     steps:
       - name: Checkout Code
@@ -22,11 +22,11 @@ jobs:
             python3-pip \
             python3-pytest \
             python3-colcon-common-extensions \
-            ros-humble-cv-bridge \
-            ros-humble-tf2-ros \
-            ros-humble-sensor-msgs \
-            ros-humble-geometry-msgs
-          pip3 install opencv-python-headless
+            ros-jazzy-cv-bridge \
+            ros-jazzy-tf2-ros \
+            ros-jazzy-sensor-msgs \
+            ros-jazzy-geometry-msgs
+          pip3 install opencv-python-headless --break-system-packages
 
       - name: Set up Workspace
         run: |
@@ -35,13 +35,13 @@ jobs:
 
       - name: Build Package
         run: |
-          . /opt/ros/humble/setup.sh
+          . /opt/ros/jazzy/setup.sh
           cd /root/ws
           colcon build --symlink-install --packages-select edge_pose_tracker
 
       - name: Run Test Suite
         run: |
-          . /opt/ros/humble/setup.sh
+          . /opt/ros/jazzy/setup.sh
           cd /root/ws
           colcon test --packages-select edge_pose_tracker
           colcon test-result --verbose
